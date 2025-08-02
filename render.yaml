@@ -49,5 +49,5 @@ services:
   # A DEFINIÇÃO DO REDIS
   - type: redis
     name: bacelar-redis
-    plan: free
+    plan: starter
     ipAllowList: [] # Permite conexões apenas de outros serviços seus
