@@ -1,4 +1,4 @@
-# render.yaml - Versão Final Unificada
+# render.yaml - Versão Final Unificada e Corrigida
 
 services:
   # O serviço principal da sua API
@@ -6,29 +6,22 @@ services:
     name: bacelar-api
     env: docker
     autoDeploy: true
-    # Define a pasta raiz onde está o Dockerfile
     rootDir: .
-
-    # Comando que roda ANTES do deploy para aplicar migrações
     preDeployCommand: "alembic upgrade head"
-
     envVars:
-      - fromGroup: bacelar-env # Puxa segredos (SECRET_KEY, etc)
-      # Diz para pegar a URL do serviço de banco DESTE MESMO ARQUIVO
+      - fromGroup: bacelar-env
       - key: DATABASE_URL
         fromDatabase:
           name: bacelar-postgres # <--- Este nome DEVE BATER
           property: connectionString
 
   # A DEFINIÇÃO DO BANCO DE DADOS
-  - type: psql
+  - type: postgres # <--- AQUI ESTÁ A CORREÇÃO (era "psql")
     name: bacelar-postgres # <--- com o nome definido aqui
-    plan: free # Ou o seu plano atual
-    # Se você já tem um banco, o Render vai tentar "adotá-lo".
-    # Se não, ele criará um novo com este nome.
-
+    plan: free 
+    
   # A DEFINIÇÃO DO REDIS
   - type: redis
     name: bacelar-redis
     plan: free
-    ipAllowList: [] # Permite conexões internas de outros serviços seus
+    ipAllowList: [] # Permite conexões internas
