@@ -9,14 +9,18 @@ app = FastAPI(title="API Bacelar Advocacia", version="1.0.0")
 # --- A CORREÇÃO DE CORS ESTÁ AQUI ---
 # Usamos um regex que aceita tanto http quanto https
 # e permite subdomínios (importante para os deploys da Vercel)
-ALLOWED_ORIGIN_REGEX = r"https?:\/\/.*\.vercel\.app"
+origins = [
+    # Origem de desenvolvimento
+    "http://localhost:5173", 
+]
 
-origins = ["*"]
+# Adiciona a URL de produção do frontend APENAS se ela estiver definida
+if settings.FRONTEND_URL:
+    origins.append(settings.FRONTEND_URL)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # Para desenvolvimento
-    allow_origin_regex=ALLOWED_ORIGIN_REGEX, # Para produção na Vercel
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
