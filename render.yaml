@@ -1,10 +1,8 @@
 # render.yaml - A Fonte da Verdade para o Deploy
-
-# Define os serviços que compõem sua aplicação
 services:
   # O serviço principal da sua API
   - type: web
-    name: bacelar-api  # Certifique-se que é o mesmo nome do seu serviço
+    name: bacelar-api # O nome do seu serviço
     env: docker
     autoDeploy: true # Ativa o deploy automático a cada push para a branch principal
 
@@ -20,16 +18,16 @@ services:
     # O Render vai usar o CMD do Dockerfile por padrão.
 
     # Conecta este serviço ao seu grupo de variáveis de ambiente
-    envVarGroups:
-      - name: bacelar-env
-        # isSync: true # Opcional: mantém o grupo sincronizado
-
-  # Definição do serviço de Banco de Dados (opcional, mas bom para manter tudo em um lugar)
-  - type: psql
-    name: bacelar-postgres # Verifique o nome do seu banco de dados
-    plan: free # Ou o plano que você estiver usando
+    envVars:
+      # Puxa as variáveis de ambiente diretamente do grupo que criaremos
+      - fromGroup: bacelar-env
+      # Variável específica do banco de dados (o Render conecta automaticamente)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bacelar-postgres # Verifique o nome do seu serviço de banco de dados
+          property: connectionString
 
   # Definição do serviço de Redis
   - type: redis
-    name: bacelar-redis # Verifique o nome do seu serviço Redis
+    name: bacelar-redis
     plan: free
