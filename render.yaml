@@ -1,36 +1,34 @@
-# render.yaml - A Fonte da Verdade para o Deploy
+# render.yaml - Versão Final Unificada
+
 services:
   # O serviço principal da sua API
   - type: web
-    name: bacelar-api # O nome do seu serviço
+    name: bacelar-api
     env: docker
-    autoDeploy: true # Ativa o deploy automático a cada push para a branch principal
-
-    # Aponta para a raiz do seu repositório onde está o Dockerfile
+    autoDeploy: true
+    # Define a pasta raiz onde está o Dockerfile
     rootDir: .
 
-    # Comando que roda UMA VEZ durante o build, APÓS a instalação de dependências.
-    # Lugar perfeito para as migrações.
+    # Comando que roda ANTES do deploy para aplicar migrações
     preDeployCommand: "alembic upgrade head"
 
-    # Não precisamos mais de `dockerCommand` ou `startCommand` aqui
-    # porque já definimos o `CMD` no formato exec no nosso Dockerfile.
-    # O Render vai usar o CMD do Dockerfile por padrão.
-
-    # Conecta este serviço ao seu grupo de variáveis de ambiente
     envVars:
-      # Puxa as variáveis de ambiente diretamente do grupo que criaremos
-      - fromGroup: bacelar-env
-      # Variável específica do banco de dados (o Render conecta automaticamente)
+      - fromGroup: bacelar-env # Puxa segredos (SECRET_KEY, etc)
+      # Diz para pegar a URL do serviço de banco DESTE MESMO ARQUIVO
       - key: DATABASE_URL
         fromDatabase:
-          name: bacelar-postgres # Verifique o nome do seu serviço de banco de dados
+          name: bacelar-postgres # <--- Este nome DEVE BATER
           property: connectionString
 
-  # Definição do serviço de Redis
+  # A DEFINIÇÃO DO BANCO DE DADOS
+  - type: psql
+    name: bacelar-postgres # <--- com o nome definido aqui
+    plan: free # Ou o seu plano atual
+    # Se você já tem um banco, o Render vai tentar "adotá-lo".
+    # Se não, ele criará um novo com este nome.
+
+  # A DEFINIÇÃO DO REDIS
   - type: redis
     name: bacelar-redis
     plan: free
-    ipAllowList:
-        - source: 0.0.0.0/0
-          description: "Allow all connections"
+    ipAllowList: [] # Permite conexões internas de outros serviços seus
