@@ -27,7 +27,7 @@ app.add_middleware(
 )
 # ------------------------------------
 
-api_router = APIRouter
+api_router = APIRouter(prefix="/api/v1")
 # (O resto do código dos routers continua o mesmo)
 api_router.include_router(auth.router, prefix="/auth", tags=["Autenticação"])
 api_router.include_router(users.router, prefix="/users", tags=["Usuários"])
