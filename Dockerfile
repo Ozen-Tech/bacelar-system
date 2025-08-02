@@ -1,4 +1,4 @@
-# Dockerfile (Versão Final com 'exec format')
+# Dockerfile (Versão Final com start-prod.sh)
 FROM python:3.11-slim
 WORKDIR /code
 
@@ -9,12 +9,10 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY . /code
 
-RUN chmod +x /code/start.sh
+# Garante que os scripts são executáveis DENTRO da imagem
 RUN chmod +x /code/start-prod.sh
 
 EXPOSE 8000
 
-# --- MUDANÇA ESSENCIAL AQUI ---
-# Usamos o formato JSON (exec form) para o CMD.
-# Cada parte do comando é um item separado no array.
-CMD ["gunicorn", "-c", "gunicorn_conf.py", "app.main:app"]
+# O único comando: execute este script.
+CMD ["/code/start-prod.sh"]
