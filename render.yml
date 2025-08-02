@@ -1,35 +1,35 @@
-# render.yaml
+# render.yaml - A Fonte da Verdade para o Deploy
+
+# Define os serviços que compõem sua aplicação
 services:
-  # Configuração para o serviço da API principal
+  # O serviço principal da sua API
   - type: web
-    name: bacelar-api # O nome do seu serviço
+    name: bacelar-api  # Certifique-se que é o mesmo nome do seu serviço
     env: docker
-    autoDeploy: true
-    # ---- INÍCIO DAS CORREÇÕES ---
-    # Define explicitamente a origem do repositório
-    repo: https://github.com/Ozen-Tech/bacelar-system # Verifique se esta é a URL correta
-    # Define os comandos de deploy
-    healthCheckPath: /
+    autoDeploy: true # Ativa o deploy automático a cada push para a branch principal
+
+    # Aponta para a raiz do seu repositório onde está o Dockerfile
+    rootDir: .
+
+    # Comando que roda UMA VEZ durante o build, APÓS a instalação de dependências.
+    # Lugar perfeito para as migrações.
     preDeployCommand: "alembic upgrade head"
-    # A configuração do startCommand é ignorada quando se usa `dockerCommand` no yaml.
-    # Mas para sermos explícitos, o comando de inicialização já está no Dockerfile.
-    # --- FIM DAS CORREÇÕES ---
-    envVars:
-      # Puxa as variáveis de ambiente diretamente do grupo que criaremos
-      - fromGroup: bacelar-env
-      # Variável específica do banco de dados (o Render conecta automaticamente)
-      - key: DATABASE_URL
-        fromDatabase:
-          name: bacelar-postgres # Verifique o nome do seu serviço de banco de dados
-          property: connectionString
 
-  # Configuração para o banco de dados (se você quiser gerenciá-lo por aqui também)
+    # Não precisamos mais de `dockerCommand` ou `startCommand` aqui
+    # porque já definimos o `CMD` no formato exec no nosso Dockerfile.
+    # O Render vai usar o CMD do Dockerfile por padrão.
+
+    # Conecta este serviço ao seu grupo de variáveis de ambiente
+    envVarGroups:
+      - name: bacelar-env
+        # isSync: true # Opcional: mantém o grupo sincronizado
+
+  # Definição do serviço de Banco de Dados (opcional, mas bom para manter tudo em um lugar)
   - type: psql
-    name: bacelar-postgres
-    plan: free
-    # ... você pode adicionar outras configurações aqui
+    name: bacelar-postgres # Verifique o nome do seu banco de dados
+    plan: free # Ou o plano que você estiver usando
 
-  # Configuração para o Redis
+  # Definição do serviço de Redis
   - type: redis
-    name: bacelar-redis
+    name: bacelar-redis # Verifique o nome do seu serviço Redis
     plan: free
