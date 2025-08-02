@@ -1,5 +1,18 @@
-# render.yaml - Versão Final Unificada e Corrigida
+# render.yaml - Versão com a estrutura correta do Render
 
+# 1. Definição do Grupo de Variáveis de Ambiente
+#    Todos os seus segredos vão aqui, no Dashboard do Render.
+envVarGroups:
+  - name: bacelar-env
+    # Adicione suas variáveis aqui: SECRET_KEY, FRONTEND_URL, etc.
+    # NÃO adicione DATABASE_URL ou as URLs do REDIS aqui.
+
+# 2. Definição dos Bancos de Dados
+databases:
+  - name: bacelar-postgres # Nome do seu serviço de banco de dados
+    plan: free # Ou o plano que você estiver usando
+
+# 3. Definição dos Serviços (Web-services, Workers, Redis)
 services:
   # O serviço principal da sua API
   - type: web
@@ -7,21 +20,34 @@ services:
     env: docker
     autoDeploy: true
     rootDir: .
+
+    # Comando de pré-deploy para executar as migrações
     preDeployCommand: "alembic upgrade head"
+    
+    # Conecta as variáveis de ambiente
     envVars:
-      - fromGroup: bacelar-env
+      - fromGroup: bacelar-env # Conecta ao grupo que criamos
+      
+      # O Render injeta a URL do banco automaticamente
       - key: DATABASE_URL
         fromDatabase:
-          name: bacelar-postgres # <--- Este nome DEVE BATER
+          name: bacelar-postgres # DEVE ser o mesmo nome do serviço acima
+          property: connectionString
+          
+      # O Render injeta a URL do Redis automaticamente para o Celery
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: bacelar-redis # DEVE ser o mesmo nome do serviço abaixo
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: bacelar-redis # DEVE ser o mesmo nome do serviço abaixo
           property: connectionString
 
-  # A DEFINIÇÃO DO BANCO DE DADOS
-  - type: postgres # <--- AQUI ESTÁ A CORREÇÃO (era "psql")
-    name: bacelar-postgres # <--- com o nome definido aqui
-    plan: free 
-    
   # A DEFINIÇÃO DO REDIS
   - type: redis
     name: bacelar-redis
     plan: free
-    ipAllowList: [] # Permite conexões internas
+    ipAllowList: [] # Permite conexões apenas de outros serviços seus
