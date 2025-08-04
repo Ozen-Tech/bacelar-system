@@ -7,4 +7,5 @@ alembic upgrade head
 
 # O servidor Gunicorn é iniciado
 echo "==> [start-prod.sh] Iniciando o servidor Gunicorn..."
-gunicorn -c gunicorn_conf.py app.main:app
+gunicorn -w 3 -k uvicorn.workers.UvicornWorker --forwarded-allow-ips='*' app.main:app --bind 0.0.0.0:8000
+forwarded_allow_ips = '*'
