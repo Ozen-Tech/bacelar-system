@@ -15,6 +15,7 @@ load_dotenv()
 
 # --- Modelos SQLAlchemy precisam ser importados aqui para o autogenerate ---
 from app.db.base_class import Base
+from app.db import base 
 from app.models.user.model import User
 from app.models.deadline.model import Deadline
 from app.models.history.model import DeadlineHistory
