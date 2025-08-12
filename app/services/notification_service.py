@@ -32,6 +32,19 @@ def send_push_notification(device_token: str, title: str, body: str, data: dict 
 def get_notifications_by_user(db: Session, *, user_id: uuid.UUID) -> list[Notification]:
     return db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).limit(50).all()
 
+def create_notification(db: Session, *, user_id: uuid.UUID, title: str, body: str) -> Notification:
+    """Cria uma nova notificação para um usuário específico"""
+    notification = Notification(
+        user_id=user_id,
+        title=title,
+        body=body,
+        is_read=False
+    )
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+    return notification
+
 def mark_all_as_read(db: Session, *, user_id: uuid.UUID) -> int:
     num_updated = db.query(Notification).filter(
         Notification.user_id == user_id,
