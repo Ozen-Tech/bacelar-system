@@ -2,7 +2,10 @@ import uuid
 from sqlalchemy.orm import Session
 from app.models.deadline.model import Deadline
 from app.models.history.model import DeadlineHistory
+from app.models.user.model import User
 from app.schemas.deadline import DeadlineCreate, DeadlineUpdate
+from app.schemas.user import UserProfile
+from app.services import notification_service
 
 
 def get_deadline_by_id(db: Session, deadline_id: uuid.UUID) -> Deadline | None:
@@ -53,7 +56,29 @@ def create_deadline(db: Session, *, deadline_in: DeadlineCreate, user_id: uuid.U
     db.commit()
     db.refresh(db_deadline)
 
-    # --- 2. DISPARE A TAREFA EM SEGUNDO PLANO ---
+    # --- 2. CRIAR NOTIFICAÇÕES ---
+    # Notificar o responsável pelo prazo (se definido)
+    if db_deadline.responsible_user_id:
+        notification_service.create_notification(
+            db=db,
+            user_id=db_deadline.responsible_user_id,
+            title="Novo prazo atribuído",
+            body=f"Você foi designado como responsável pelo prazo: {db_deadline.task_description}"
+        )
+    
+    # Notificar todos os administradores
+    admins = db.query(User).filter(User.profile == UserProfile.ADMIN, User.is_active == True).all()
+    for admin in admins:
+        # Evitar notificar o admin que criou o prazo se ele for o responsável
+        if admin.id != db_deadline.responsible_user_id:
+            notification_service.create_notification(
+                db=db,
+                user_id=admin.id,
+                title="Novo prazo criado",
+                body=f"Um novo prazo foi criado: {db_deadline.task_description}"
+            )
+
+    # --- 3. DISPARE A TAREFA EM SEGUNDO PLANO ---
     # '.delay()' é o comando que envia a tarefa para a fila do Celery.
     # Passamos apenas o ID, que é um dado simples e serializável.
     classify_deadline.delay(str(db_deadline.id))

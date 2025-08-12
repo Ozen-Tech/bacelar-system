@@ -4,6 +4,8 @@
 
 # Credenciais Secretas
 firebase-credentials.json
+bacelar-advocacia-prazos-firebase-adminsdk-*.json
+FIREBASE_CREDENTIALS_FORMATTED.md
 
 # Arquivos compilados do Python
 __pycache__/
@@ -15,6 +17,9 @@ __pycache__/
 .venv
 venv/
 env/
+
+# Arquivos do Celery
+celerybeat-schedule*
 
 # Arquivos do S.O. e IDEs
 .DS_Store
