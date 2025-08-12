@@ -29,6 +29,10 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     notification_preferences: Optional[NotificationPreferences] = None
 
+class PasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6)
+
 class UserPublic(UserBase):
     id: uuid.UUID
     model_config = ConfigDict(from_attributes=True)

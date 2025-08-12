@@ -1,9 +1,9 @@
 # app/api/endpoints/users.py (VERSÃO FINAL E CORRIGIDA)
 
-from fastapi import APIRouter, Depends, Body, status
+from fastapi import APIRouter, Depends, Body, status, HTTPException
 from sqlalchemy.orm import Session
 # --- A CORREÇÃO ESTÁ AQUI: Adicionamos UserUpdate ---
-from app.schemas.user import UserPublic, UserUpdate
+from app.schemas.user import UserPublic, UserUpdate, PasswordChange
 # --------------------------------------------------
 from app.schemas.token import FCMTokenPayload
 from app.api import deps
@@ -28,6 +28,29 @@ def update_user_me(
 ):
     """Atualiza os dados do usuário logado (nome, email, telefone, etc)."""
     return user_service.update_user(db=db, db_obj=current_user, obj_in=obj_in)
+
+@router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    *,
+    db: Session = Depends(deps.get_db),
+    password_data: PasswordChange,
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Altera a senha do usuário logado."""
+    success = user_service.change_password(
+        db=db,
+        user=current_user,
+        current_password=password_data.current_password,
+        new_password=password_data.new_password
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Senha atual incorreta"
+        )
+    
+    return None
 
 @router.post("/me/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
 def update_fcm_token(
