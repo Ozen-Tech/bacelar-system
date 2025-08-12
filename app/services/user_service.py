@@ -49,6 +49,19 @@ def update_user(db: Session, *, db_obj: User, obj_in: UserUpdate) -> User:
     db.refresh(db_obj)
     return db_obj
 
+def change_password(db: Session, *, user: User, current_password: str, new_password: str) -> bool:
+    """Altera a senha do usuário após verificar a senha atual."""
+    # Verifica se a senha atual está correta
+    if not verify_password(current_password, user.password_hash):
+        return False
+    
+    # Atualiza com a nova senha
+    user.password_hash = get_password_hash(new_password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return True
+
 def get_all_users(db: Session) -> list[User]:
     """Busca todos os usuários do banco."""
     return db.query(User).order_by(User.name).all()
