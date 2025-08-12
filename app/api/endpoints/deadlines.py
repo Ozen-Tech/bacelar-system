@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.user.model import User
 from app.schemas.deadline import DeadlineCreate, DeadlineUpdate, DeadlinePublic
+from app.schemas.user import UserProfile
 from app.services import deadline_service
 
 router = APIRouter()
@@ -16,7 +17,12 @@ def create_new_deadline(
     deadline_in: DeadlineCreate,
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    """Cria um novo prazo no sistema."""
+    """Cria um novo prazo no sistema. Apenas usuários ADMIN podem criar prazos."""
+    if current_user.profile != UserProfile.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas usuários ADMIN podem criar prazos"
+        )
     return deadline_service.create_deadline(db=db, deadline_in=deadline_in, user_id=current_user.id)
 
 @router.get("/", response_model=List[DeadlinePublic])
@@ -66,10 +72,18 @@ def update_existing_deadline(
     obj_in: DeadlineUpdate,
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    """Atualiza um prazo existente."""
+    """Atualiza um prazo existente. ADMIN pode editar qualquer prazo, advogados podem editar apenas prazos sob sua responsabilidade."""
     db_obj = deadline_service.get_deadline_by_id(db, deadline_id=deadline_id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Prazo não encontrado")
+    
+    # Verificar permissões: ADMIN pode editar qualquer prazo, outros usuários só podem editar se forem responsáveis
+    if current_user.profile != UserProfile.ADMIN and db_obj.responsible_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você só pode editar prazos sob sua responsabilidade"
+        )
+    
     return deadline_service.update_deadline(db=db, db_obj=db_obj, obj_in=obj_in, user_id=current_user.id)
 
 @router.delete("/{deadline_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -78,7 +92,13 @@ def delete_existing_deadline(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
-    """Exclui um prazo."""
+    """Exclui um prazo. Apenas usuários ADMIN podem excluir prazos."""
+    if current_user.profile != UserProfile.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas usuários ADMIN podem excluir prazos"
+        )
+    
     db_obj = deadline_service.get_deadline_by_id(db, deadline_id=deadline_id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Prazo não encontrado")
