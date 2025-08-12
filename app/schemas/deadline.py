@@ -5,7 +5,8 @@ from datetime import datetime
 from enum import Enum
 from .user import UserPublic
 from typing import Optional
-from .history import DeadlineHistoryPublic 
+from .history import DeadlineHistoryPublic
+from .attachment import AttachmentPublic 
 
 class DeadlineStatus(str, Enum):
     PENDENTE = "pendente"
@@ -43,6 +44,7 @@ class DeadlinePublic(DeadlineBase):
     classification: DeadlineClassification
     responsible: Optional[UserPublic] = None
     history: list[DeadlineHistoryPublic] = []
+    attachments: list[AttachmentPublic] = []
     created_at: datetime
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

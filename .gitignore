@@ -25,3 +25,6 @@ celerybeat-schedule*
 .DS_Store
 .vscode/
 .idea/
+
+# Uploads de arquivos
+uploads/

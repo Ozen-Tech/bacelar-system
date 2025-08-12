@@ -25,6 +25,7 @@ class Deadline(Base):
     responsible = relationship("User", back_populates="deadlines")
     
     history = relationship("DeadlineHistory", back_populates="deadline", cascade="all, delete-orphan")
+    attachments = relationship("Attachment", back_populates="deadline", cascade="all, delete-orphan")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
