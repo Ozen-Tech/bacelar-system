@@ -4,7 +4,7 @@
 #    Todos os seus segredos vão aqui, no Dashboard do Render.
 envVarGroups:
   - name: bacelar-env
-    # Adicione suas variáveis aqui: SECRET_KEY, FRONTEND_URL, etc.
+    # Adicione suas variáveis aqui: SECRET_KEY, FRONTEND_URL, FIREBASE_CREDENTIALS_JSON, etc.
     # NÃO adicione DATABASE_URL ou as URLs do REDIS aqui.
 
 # 2. Definição dos Bancos de Dados
@@ -58,7 +58,7 @@ services:
     env: docker
     autoDeploy: true
     rootDir: .
-    dockerCommand: "celery -A app.celery worker --loglevel=info"
+    dockerCommand: "celery -A app.worker worker --loglevel=info"
     
     # Conecta as mesmas variáveis de ambiente
     envVars:
@@ -84,7 +84,7 @@ services:
     env: docker
     autoDeploy: true
     rootDir: .
-    dockerCommand: "celery -A app.celery beat --loglevel=info"
+    dockerCommand: "celery -A app.worker beat --loglevel=info"
     
     # Conecta as mesmas variáveis de ambiente
     envVars:
