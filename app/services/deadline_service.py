@@ -14,7 +14,9 @@ def get_all_deadlines(
     limit: int = 100,
     search: str | None = None,
     type: str | None = None,
-    responsible_id: uuid.UUID | None = None
+    responsible_id: uuid.UUID | None = None,
+    classification: str | None = None,
+    status: str | None = None
 ) -> list[Deadline]:
     query = db.query(Deadline)
     if search:
@@ -23,6 +25,10 @@ def get_all_deadlines(
         query = query.filter(Deadline.type == type)
     if responsible_id:
         query = query.filter(Deadline.responsible_user_id == responsible_id)
+    if classification:
+        query = query.filter(Deadline.classification == classification)
+    if status:
+        query = query.filter(Deadline.status == status)
         
     return query.order_by(Deadline.due_date.asc()).offset(skip).limit(limit).all()
 

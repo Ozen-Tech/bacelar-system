@@ -24,10 +24,27 @@ def list_all_deadlines(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
+    q: str = None,  # Parâmetro de busca (compatível com frontend)
+    search: str = None,  # Parâmetro de busca alternativo
+    type: str = None,
+    responsible_id: str = None,
+    classification: str = None,
+    status: str = None,
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    """Lista todos os prazos cadastrados."""
-    return deadline_service.get_all_deadlines(db=db, skip=skip, limit=limit)
+    """Lista todos os prazos cadastrados com filtros."""
+    # Usa 'q' se fornecido, senão usa 'search'
+    search_term = q or search
+    return deadline_service.get_all_deadlines(
+        db=db, 
+        skip=skip, 
+        limit=limit,
+        search=search_term,
+        type=type,
+        responsible_id=uuid.UUID(responsible_id) if responsible_id else None,
+        classification=classification,
+        status=status
+    )
 
 @router.get("/{deadline_id}", response_model=DeadlinePublic)
 def get_deadline_details(
