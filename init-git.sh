@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para inicializar Git e fazer primeiro commit do backend
+# Script para inicializar 
 
 echo "🚀 Inicializando repositório Git para o backend..."
 

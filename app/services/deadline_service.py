@@ -19,8 +19,12 @@ def get_all_deadlines(
     type: str | None = None,
     responsible_id: uuid.UUID | None = None,
     classification: str | None = None,
-    status: str | None = None
+    status: str | None = None,
+    due_date_from: str | None = None,
+    due_date_to: str | None = None
 ) -> list[Deadline]:
+    from datetime import datetime
+    
     query = db.query(Deadline)
     if search:
         query = query.filter(Deadline.process_number.ilike(f"%{search}%"))
@@ -32,6 +36,18 @@ def get_all_deadlines(
         query = query.filter(Deadline.classification == classification)
     if status:
         query = query.filter(Deadline.status == status)
+    if due_date_from:
+        try:
+            from_date = datetime.strptime(due_date_from, "%Y-%m-%d").date()
+            query = query.filter(Deadline.due_date >= from_date)
+        except ValueError:
+            pass  # Ignora datas inválidas
+    if due_date_to:
+        try:
+            to_date = datetime.strptime(due_date_to, "%Y-%m-%d").date()
+            query = query.filter(Deadline.due_date <= to_date)
+        except ValueError:
+            pass  # Ignora datas inválidas
         
     return query.order_by(Deadline.due_date.asc()).offset(skip).limit(limit).all()
 

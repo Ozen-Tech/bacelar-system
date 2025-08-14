@@ -38,6 +38,8 @@ def list_all_deadlines(
     responsible_id: str = None,
     classification: str = None,
     status: str = None,
+    due_date_from: str = None,  # Filtro de data inicial
+    due_date_to: str = None,  # Filtro de data final
     current_user: User = Depends(deps.get_current_active_user)
 ):
     """Lista todos os prazos cadastrados com filtros."""
@@ -51,7 +53,9 @@ def list_all_deadlines(
         type=type,
         responsible_id=uuid.UUID(responsible_id) if responsible_id else None,
         classification=classification,
-        status=status
+        status=status,
+        due_date_from=due_date_from,
+        due_date_to=due_date_to
     )
 
 @router.get("/{deadline_id}", response_model=DeadlinePublic)
