@@ -57,23 +57,27 @@ def create_deadline(db: Session, *, deadline_in: DeadlineCreate, user_id: uuid.U
     db.refresh(db_deadline)
 
     # --- 2. CRIAR NOTIFICAÇÕES ---
-    # Notificar o responsável pelo prazo (se definido)
-    if db_deadline.responsible_user_id:
-        notification_service.create_notification(
-            db=db,
-            user_id=db_deadline.responsible_user_id,
-            title="Novo prazo atribuído",
-            body=f"Você foi designado como responsável pelo prazo: {db_deadline.task_description}"
-        )
+    # Notificar TODOS os usuários ativos sobre o novo prazo
+    all_active_users = db.query(User).filter(User.is_active == True).all()
     
-    # Notificar todos os administradores
-    admins = db.query(User).filter(User.profile == UserProfile.ADMIN, User.is_active == True).all()
-    for admin in admins:
-        # Evitar notificar o admin que criou o prazo se ele for o responsável
-        if admin.id != db_deadline.responsible_user_id:
+    for user in all_active_users:
+        # Personalizar a mensagem baseada no papel do usuário
+        if user.id == db_deadline.responsible_user_id:
+            # Usuário responsável pelo prazo
             notification_service.create_notification(
                 db=db,
-                user_id=admin.id,
+                user_id=user.id,
+                title="Novo prazo atribuído",
+                body=f"Você foi designado como responsável pelo prazo: {db_deadline.task_description}"
+            )
+        elif user.id == user_id:
+            # Usuário que criou o prazo - não notificar para evitar spam
+            continue
+        else:
+            # Todos os outros usuários ativos
+            notification_service.create_notification(
+                db=db,
+                user_id=user.id,
                 title="Novo prazo criado",
                 body=f"Um novo prazo foi criado: {db_deadline.task_description}"
             )
