@@ -1,18 +1,31 @@
-# Dockerfile (Versão Final com start-prod.sh)
+# Usa imagem base enxuta do Python
 FROM python:3.11-slim
+
+# Define diretório de trabalho
 WORKDIR /code
 
-ENV PYTHONPATH "${PYTHONPATH}:/code"
+# Evita geração de pyc e melhora logs
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH="/code:${PYTHONPATH}"
 
-COPY requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+# Instala dependências de sistema mínimas (pode ajustar conforme o projeto)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY . /code
+# Copia dependências primeiro para aproveitar cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Garante que os scripts são executáveis DENTRO da imagem
+# Copia todo o projeto
+COPY . .
+
+# Garante permissão de execução do script
 RUN chmod +x /code/start-prod.sh
 
-EXPOSE 8000
+# Railway define a porta dinamicamente via $PORT
+EXPOSE $PORT
 
-# O único comando: execute este script.
+# Comando de start (usa script para migrations + gunicorn)
 CMD ["/code/start-prod.sh"]
