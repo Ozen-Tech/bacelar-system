@@ -1,0 +1,11 @@
+descricao,data_vencimento,numero_processo,tipo,partes,classificacao
+Apresentar recurso de apelação no processo,2024-12-15,0001234-56.2024.8.02.0001,Recursal,João Silva vs. Maria José,critico
+Contestação no processo trabalhista,31/12/2024,0007890-12.2024.5.02.0001,Processual,Empresa ABC Ltda vs. João Santos,normal
+Audiência de conciliação na 1ª Vara Cível,2025-01-10,0005555-99.2024.8.02.0001,Audiência,Maria Oliveira vs. José Costa,fatal
+Prazo para manifestação sobre documentos,15/01/2025,0009999-88.2024.8.02.0001,Processual,Banco XYZ vs. Pedro Lima,normal
+Recurso de agravo de instrumento,2025-01-20,0003333-77.2024.8.02.0001,Recursal,Ana Paula vs. Carlos Eduardo,critico
+Apresentação de alegações finais,25/01/2025,0002222-66.2024.8.02.0001,Processual,Construtora ABC vs. Município,normal
+Prazo para juntada de documentos complementares,2025-02-01,0008888-55.2024.8.02.0001,Processual,Clínica Médica vs. Plano de Saúde,normal
+Audiência de instrução e julgamento,10/02/2025,0004444-44.2024.8.02.0001,Audiência,Supermercado XYZ vs. Fornecedor ABC,critico
+Recurso ordinário trabalhista,2025-02-15,0006666-33.2024.5.02.0001,Recursal,Funcionário vs. Empresa Tech Ltda,fatal
+Prazo para impugnação ao cumprimento de sentença,20/02/2025,0007777-22.2024.8.02.0001,Processual,Devedor vs. Credor Financeira,normal
