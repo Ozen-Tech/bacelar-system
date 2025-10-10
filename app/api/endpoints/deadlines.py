@@ -5,7 +5,15 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.user.model import User
-from app.schemas.deadline import DeadlineCreate, DeadlineUpdate, DeadlinePublic
+from app.schemas.deadline import (
+    DeadlineCreate,
+    DeadlineUpdate,
+    DeadlinePublic,
+    BulkDeadlineCreate,
+    BulkImportResponse,
+    BulkDeadlineError,
+    BulkDeadlineSkipped
+)
 from app.schemas.attachment import AttachmentPublic
 from app.schemas.user import UserProfile
 from app.services import deadline_service, attachment_service
@@ -26,6 +34,157 @@ def create_new_deadline(
             detail="Apenas usuários ADMIN podem criar prazos"
         )
     return deadline_service.create_deadline(db=db, deadline_in=deadline_in, user_id=current_user.id)
+
+@router.post("/bulk", response_model=BulkImportResponse, status_code=status.HTTP_201_CREATED)
+def create_deadlines_bulk(
+    *,
+    db: Session = Depends(deps.get_db),
+    bulk_data: BulkDeadlineCreate,
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """
+    Cria múltiplos prazos de uma vez (importação em massa via JSON).
+
+    Apenas usuários ADMIN podem criar prazos em massa.
+
+    Este endpoint aceita até 500 deadlines por requisição e retorna
+    um relatório detalhado com sucessos, duplicatas puladas e erros.
+
+    **Parâmetros:**
+    - `deadlines`: Lista de objetos DeadlineCreate (mínimo 1, máximo 500)
+    - `skip_duplicates`: Se True, pula deadlines duplicados (padrão: True). Verifica por processo + data + descrição
+    - `skip_notifications`: Se True, não envia notificações (padrão: True, recomendado para grandes volumes)
+    - `skip_celery`: Se True, não dispara classificação automática (padrão: True, recomendado para grandes volumes)
+
+    **Exemplo de uso:**
+    ```json
+    {
+        "deadlines": [
+            {
+                "task_description": "Apresentar contestação",
+                "due_date": "2024-12-31T23:59:59",
+                "process_number": "1234567-89.2024.8.01.0001",
+                "type": "Recursal",
+                "parties": "João vs. Maria",
+                "status": "pendente",
+                "responsible_user_id": "uuid-do-usuario"
+            }
+        ],
+        "skip_duplicates": true,
+        "skip_notifications": true,
+        "skip_celery": true
+    }
+    ```
+
+    **Retorno:**
+    ```json
+    {
+        "total_received": 10,
+        "imported_count": 7,
+        "skipped_count": 1,
+        "error_count": 2,
+        "deadlines": [...],  // Deadlines criados com sucesso
+        "skipped": [         // Duplicatas puladas
+            {
+                "index": 2,
+                "task_description": "Prazo duplicado",
+                "process_number": "1234567-89.2024.8.01.0001",
+                "due_date": "2024-12-31T23:59:59",
+                "reason": "Prazo duplicado já existe no banco de dados",
+                "existing_deadline_id": "uuid-do-prazo-existente"
+            }
+        ],
+        "errors": [          // Erros encontrados
+            {
+                "index": 3,
+                "task_description": "Prazo inválido",
+                "error": "Data de vencimento não pode ser no passado"
+            }
+        ]
+    }
+    ```
+    """
+    # Verificar permissão ADMIN
+    if current_user.profile != UserProfile.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas usuários ADMIN podem criar prazos em massa"
+        )
+
+    created_deadlines: List[DeadlinePublic] = []
+    skipped_deadlines: List[BulkDeadlineSkipped] = []
+    errors: List[BulkDeadlineError] = []
+
+    # Processar cada deadline individualmente
+    for index, deadline_data in enumerate(bulk_data.deadlines):
+        try:
+            # Verificar duplicatas se a opção estiver habilitada
+            if bulk_data.skip_duplicates:
+                existing = deadline_service.check_duplicate_deadline(
+                    db=db,
+                    process_number=deadline_data.process_number,
+                    due_date=deadline_data.due_date,
+                    task_description=deadline_data.task_description,
+                    tolerance_days=1  # Tolerância de 1 dia para considerar duplicata
+                )
+
+                if existing:
+                    # Prazo duplicado encontrado - pular
+                    skipped_deadlines.append(BulkDeadlineSkipped(
+                        index=index,
+                        task_description=deadline_data.task_description[:100],
+                        process_number=deadline_data.process_number,
+                        due_date=deadline_data.due_date,
+                        reason="Prazo duplicado já existe no banco de dados",
+                        existing_deadline_id=existing.id
+                    ))
+                    continue  # Pular para o próximo deadline
+
+            # Usar a função otimizada para bulk
+            deadline = deadline_service.create_deadline_bulk(
+                db=db,
+                deadline_in=deadline_data,
+                user_id=current_user.id,
+                skip_notifications=bulk_data.skip_notifications,
+                skip_celery=bulk_data.skip_celery
+            )
+
+            # Converter para schema público
+            deadline_public = DeadlinePublic.model_validate(deadline)
+            created_deadlines.append(deadline_public)
+
+        except HTTPException as http_ex:
+            # Capturar exceções HTTP específicas
+            errors.append(BulkDeadlineError(
+                index=index,
+                task_description=deadline_data.task_description[:50] if deadline_data.task_description else "N/A",
+                error=http_ex.detail
+            ))
+        except ValueError as val_ex:
+            # Capturar erros de validação
+            errors.append(BulkDeadlineError(
+                index=index,
+                task_description=deadline_data.task_description[:50] if deadline_data.task_description else "N/A",
+                error=f"Erro de validação: {str(val_ex)}"
+            ))
+        except Exception as ex:
+            # Capturar outros erros
+            errors.append(BulkDeadlineError(
+                index=index,
+                task_description=deadline_data.task_description[:50] if deadline_data.task_description else "N/A",
+                error=f"Erro inesperado: {str(ex)}"
+            ))
+
+    # Retornar relatório completo
+    return BulkImportResponse(
+        total_received=len(bulk_data.deadlines),
+        imported_count=len(created_deadlines),
+        skipped_count=len(skipped_deadlines),
+        error_count=len(errors),
+        deadlines=created_deadlines,
+        skipped=skipped_deadlines,
+        errors=errors
+    )
 
 @router.get("/", response_model=List[DeadlinePublic])
 def list_all_deadlines(

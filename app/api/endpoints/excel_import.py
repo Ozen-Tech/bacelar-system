@@ -141,6 +141,7 @@ async def import_spreadsheet(
     *,
     db: Session = Depends(get_db),
     file: UploadFile = File(...),
+    skip_duplicates: bool = True,  # Novo parâmetro
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -154,12 +155,17 @@ async def import_spreadsheet(
     - partes (opcional): Partes envolvidas
     - classificacao (opcional): normal, critico ou fatal
 
+    Parâmetros:
+    - skip_duplicates (query param): Se True (padrão), pula prazos duplicados
+
     Retorna:
     {
         "message": "...",
         "imported_count": 10,
-        "error_count": 2,
+        "skipped_count": 2,
+        "error_count": 1,
         "imported_deadlines": [...],
+        "skipped_deadlines": [...],
         "errors": [...]
     }
     """
@@ -201,6 +207,7 @@ async def import_spreadsheet(
             )
 
         imported_deadlines = []
+        skipped_deadlines = []
         errors = []
 
         # 6. PROCESSAR CADA LINHA
@@ -248,12 +255,35 @@ async def import_spreadsheet(
                 tipo = None if pd.isna(row.get('tipo')) else str(row['tipo']).strip()
                 parties = None if pd.isna(row.get('partes')) else str(row['partes']).strip()
 
-                # 6.4 PROCESSAR CLASSIFICAÇÃO
+                # 6.4 VERIFICAR DUPLICATAS (NOVO)
+                if skip_duplicates:
+                    from app.services.deadline_service import check_duplicate_deadline
+
+                    existing = check_duplicate_deadline(
+                        db=db,
+                        process_number=process_number,
+                        due_date=due_date,
+                        task_description=task_description,
+                        tolerance_days=1
+                    )
+
+                    if existing:
+                        skipped_deadlines.append({
+                            "linha": idx + 2,
+                            "descricao": task_description,
+                            "numero_processo": process_number,
+                            "data_vencimento": due_date.strftime('%Y-%m-%d'),
+                            "motivo": "Prazo duplicado já existe no banco de dados",
+                            "prazo_existente_id": str(existing.id)
+                        })
+                        continue  # Pular para a próxima linha
+
+                # 6.5 PROCESSAR CLASSIFICAÇÃO
                 classification_str = 'normal'
                 if 'classificacao' in row and not pd.isna(row['classificacao']):
                     classification_str = str(row['classificacao']).lower().strip()
 
-                # 6.5 CRIAR PRAZO NO BANCO
+                # 6.6 CRIAR PRAZO NO BANCO
                 deadline_data = DeadlineCreate(
                     task_description=task_description,
                     due_date=due_date,
@@ -285,10 +315,12 @@ async def import_spreadsheet(
 
         # 7. RETORNAR RESULTADO
         return {
-            "message": f"Importação concluída. {len(imported_deadlines)} prazos importados, {len(errors)} falharam.",
+            "message": f"Importação concluída. {len(imported_deadlines)} prazos importados, {len(skipped_deadlines)} duplicatas puladas, {len(errors)} falharam.",
             "imported_count": len(imported_deadlines),
+            "skipped_count": len(skipped_deadlines),
             "error_count": len(errors),
             "imported_deadlines": imported_deadlines,
+            "skipped_deadlines": skipped_deadlines,
             "errors": errors
         }
 
